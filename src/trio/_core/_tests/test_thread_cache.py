@@ -254,3 +254,20 @@ def test_os_thread_name_func_does_not_need_find_library(
 
     monkeypatch.setattr(ctypes.util, "find_library", find_library)
     assert _thread_cache.get_os_thread_name_func() is not None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="windows has no pthreads")
+def test_os_thread_name_func_falls_back_to_find_library(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # if the running process doesn't have pthread_setname_np, the pthread
+    # library should still be found the old way.
+    real_cdll = ctypes.CDLL
+
+    def cdll(name: str | None) -> object:
+        if name is None:
+            return object()
+        return real_cdll(name)
+
+    monkeypatch.setattr(ctypes, "CDLL", cdll)
+    assert _thread_cache.get_os_thread_name_func() is not None
